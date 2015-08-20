@@ -28,6 +28,8 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/nw/src/nw_shell.h"
 
+#include "clipboard_mac.h"
+
 namespace nwapi {
 
 Clipboard::Clipboard(int id,
@@ -43,8 +45,7 @@ Clipboard::~Clipboard() {
         DCHECK(content::BrowserThread::CurrentlyOn(
             content::BrowserThread::UI));
     
-        
-    
+        DoDragAndDropCocoa(files, shell);
     }
     
 void Clipboard::Call(const std::string& method,
@@ -59,17 +60,14 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Drag") {
       content::Shell* shell_ =
             content::Shell::FromRenderViewHost(
-                dispatcher_host->render_view_host());
-      
-      //NSWindow* window =
-      //  static_cast<nw::NativeWindowCocoa*>(shell_->window())->window();
-      
-      base::ListValue* fileList = NULL;
-      arguments.GetList(&fileList);
+                dispatcher_host()->render_view_host());
+     
+      const base::ListValue* fileList = NULL;
+      arguments.GetList(0, &fileList);
       
       std::vector<std::string> files;
       
-      for (int i = 0; i < fileList->GetSize(); i++) {
+      for (size_t i = 0; i < fileList->GetSize(); i++) {
           std::string file;
           arguments.GetString(i, &file);
           files.push_back(file);
@@ -78,7 +76,7 @@ void Clipboard::Call(const std::string& method,
       content::BrowserThread::PostTask(
             content::BrowserThread::UI, FROM_HERE,
             base::Bind(&DoDragAndDrop, files, shell_));
-  }
+  } else {
     NOTREACHED() << "Invalid call to Clipboard method:" << method
                  << " arguments:" << arguments;
   }

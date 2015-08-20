@@ -51,6 +51,14 @@ Clipboard.prototype.clear = function() {
   nw.callObjectMethod(this, 'Clear', [ ]);
 }
 
+Clipboard.prototype.drag = function(files) {
+  if (typeof file == 'undefined') {
+    throw new TypeError('Invalid type');
+  }
+
+  nw.callObjectMethod(this, 'Drag', [files]);
+}
+
 exports.Clipboard = {
   get: function() {
     if (clipboardInstance == null) {
