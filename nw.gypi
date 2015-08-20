@@ -196,6 +196,8 @@
         'src/api/base/base.h',
         'src/api/clipboard/clipboard.cc',
         'src/api/clipboard/clipboard.h',
+	'src/api/clipboard/clipboard_mac.h',
+	'src/api/clipboard/clipboard_mac.mm',
         'src/api/dispatcher.cc',
         'src/api/dispatcher.h',
         'src/api/dispatcher_bindings.cc',
