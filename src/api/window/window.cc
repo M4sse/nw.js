@@ -189,7 +189,7 @@ Window::~Window() {
 void Window::Call(const std::string& method,
                   const base::ListValue& arguments) {
   if (method == "Show") {
-    shell_->window()->Show();
+      shell_->window()->Show();
   } else if (method == "Close") {
     bool force = false;
     arguments.GetBoolean(0, &force);
