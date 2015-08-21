@@ -28,7 +28,13 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/nw/src/nw_shell.h"
 
+#ifdef OS_MACOSX
 #include "clipboard_mac.h"
+#endif
+
+#ifdef OS_WIN
+#include "clipboard_win.h"
+#endif
 
 namespace nwapi {
 
@@ -44,8 +50,13 @@ Clipboard::~Clipboard() {
     void DoDragAndDrop(std::vector<std::string> files, content::Shell* shell) {
         DCHECK(content::BrowserThread::CurrentlyOn(
             content::BrowserThread::UI));
-    
+#ifdef OS_MACOSX
         DoDragAndDropCocoa(files, shell);
+#endif
+
+#ifdef OS_WIN
+		DoDragAndDropWin32(files, shell);
+#endif
     }
     
 void Clipboard::Call(const std::string& method,

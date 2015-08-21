@@ -6,6 +6,7 @@
 
 #include "content/nw/src/nw_shell.h"
 
-void DoDragAndDropCocoa(std::vector<std::string> files, content::Shell* shell);
+void DoDragAndDropCocoa(std::vector<std::string> files,
+	content::Shell* shell);
 
 #endif
