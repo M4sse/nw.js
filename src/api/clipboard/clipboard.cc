@@ -28,7 +28,14 @@
 #include "content/public/browser/browser_thread.h"
 #include "content/nw/src/nw_shell.h"
 
+#ifdef OS_MACOSX
 #include "clipboard_mac.h"
+#endif
+
+#ifdef OS_WIN
+#include "clipboard_win.h"
+#endif
+
 
 namespace nwapi {
 
@@ -44,8 +51,15 @@ Clipboard::~Clipboard() {
     void DoDragAndDrop(std::vector<std::string> files, content::Shell* shell) {
         DCHECK(content::BrowserThread::CurrentlyOn(
             content::BrowserThread::UI));
-    
+
+#ifdef OS_MACOSX
         DoDragAndDropCocoa(files, shell);
+#endif
+
+#ifdef OS_WIN
+		DoDragAndDropWin32(files, shell);
+#endif
+
     }
     
 void Clipboard::Call(const std::string& method,
@@ -58,6 +72,20 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Clear") {
     Clear();
   } else if (method == "Drag") {
+
+#ifdef OS_WIN
+	  if (!GetAsyncKeyState(VK_CONTROL)) {
+		  return;
+	  }
+#endif
+
+#ifdef OS_MACOSX
+	  unsigned short kVK_Command = 0x37;
+	  if (!isPressed(kVK_Command))  {
+		  return;
+	  }
+#endif
+
       content::Shell* shell_ =
             content::Shell::FromRenderViewHost(
                 dispatcher_host()->render_view_host());
@@ -69,7 +97,7 @@ void Clipboard::Call(const std::string& method,
       
       for (size_t i = 0; i < fileList->GetSize(); i++) {
           std::string file;
-          arguments.GetString(i, &file);
+		  fileList->GetString(i, &file);
           files.push_back(file);
       }
       
