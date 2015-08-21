@@ -52,7 +52,7 @@ Clipboard.prototype.clear = function() {
 }
 
 Clipboard.prototype.drag = function(files) {
-  if (typeof file == 'undefined') {
+  if (typeof files == 'undefined') {
     throw new TypeError('Invalid type');
   }
 

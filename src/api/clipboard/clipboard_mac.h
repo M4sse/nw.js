@@ -6,6 +6,8 @@
 
 #include "content/nw/src/nw_shell.h"
 
+bool isPressed(unsigned short inKeyCode);
+
 void DoDragAndDropCocoa(std::vector<std::string> files,
 	content::Shell* shell);
 

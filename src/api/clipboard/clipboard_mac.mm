@@ -2,10 +2,17 @@
 
 #import <Cocoa/Cocoa.h>
 #import <AppKit/AppKit.h>
+#include <Carbon/Carbon.h>
 
 #include "content/nw/src/browser/native_window_mac.h"
 
 using namespace std;
+
+bool isPressed(unsigned short inKeyCode) {
+	unsigned char keyMap[16];
+    GetKeys((BigEndianUInt32*) &keyMap);
+    return (0 != ((keyMap[ inKeyCode >> 3] >> (inKeyCode & 7)) & 1));
+}
 
 void DoDragAndDropCocoa(vector<string> files, content::Shell* shell) {
     
