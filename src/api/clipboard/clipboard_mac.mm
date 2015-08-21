@@ -2,7 +2,6 @@
 
 #import <Cocoa/Cocoa.h>
 #import <AppKit/AppKit.h>
-
 #include <Carbon/Carbon.h>
 
 #include "content/nw/src/browser/native_window_mac.h"

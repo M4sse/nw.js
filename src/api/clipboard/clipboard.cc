@@ -36,7 +36,6 @@
 #include "clipboard_win.h"
 #endif
 
-
 namespace nwapi {
 
 Clipboard::Clipboard(int id,
@@ -51,7 +50,6 @@ Clipboard::~Clipboard() {
     void DoDragAndDrop(std::vector<std::string> files, content::Shell* shell) {
         DCHECK(content::BrowserThread::CurrentlyOn(
             content::BrowserThread::UI));
-
 #ifdef OS_MACOSX
         DoDragAndDropCocoa(files, shell);
 #endif
@@ -59,7 +57,6 @@ Clipboard::~Clipboard() {
 #ifdef OS_WIN
 		DoDragAndDropWin32(files, shell);
 #endif
-
     }
     
 void Clipboard::Call(const std::string& method,
@@ -78,7 +75,6 @@ void Clipboard::Call(const std::string& method,
 		  return;
 	  }
 #endif
-
 #ifdef OS_MACOSX
 	  unsigned short kVK_Command = 0x37;
 	  if (!isPressed(kVK_Command))  {
