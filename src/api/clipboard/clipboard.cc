@@ -47,11 +47,11 @@ Clipboard::Clipboard(int id,
 Clipboard::~Clipboard() {
 }
 
-    void DoDragAndDrop(std::vector<std::string> files, content::Shell* shell) {
-        DCHECK(content::BrowserThread::CurrentlyOn(
-            content::BrowserThread::UI));
+	void DoDragAndDrop(std::vector<std::string> files, content::Shell* shell) {
+		DCHECK(content::BrowserThread::CurrentlyOn(
+			content::BrowserThread::UI));
 #ifdef OS_MACOSX
-        DoDragAndDropCocoa(files, shell);
+		DoDragAndDropCocoa(files, shell);
 #endif
 
 #ifdef OS_WIN
@@ -71,13 +71,14 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Drag") {
 
 #ifdef OS_WIN
-	  if (!GetAsyncKeyState(VK_CONTROL)) {
+	  // VK_MENU is actually the alt key
+	  if (!GetAsyncKeyState(VK_MENU)) {
 		  return;
 	  }
 #endif
 #ifdef OS_MACOSX
-	  unsigned short kVK_Command = 0x37;
-	  if (!isPressed(kVK_Command))  {
+	  unsigned short kVK_Option = 0x3A;
+	  if (!isPressed(kVK_Option))  {
 		  return;
 	  }
 #endif
