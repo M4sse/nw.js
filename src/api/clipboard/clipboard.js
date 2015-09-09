@@ -59,6 +59,10 @@ Clipboard.prototype.drag = function(files) {
   nw.callObjectMethod(this, 'Drag', [files]);
 }
 
+Clipboard.prototype.prepareDrag = function(message) {
+	nw.callObjectMethod(this, "PrepareDrag", [message]);
+}
+
 exports.Clipboard = {
   get: function() {
     if (clipboardInstance == null) {

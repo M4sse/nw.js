@@ -57,6 +57,7 @@ Clipboard::~Clipboard() {
 #ifdef OS_WIN
 		DoDragAndDropWin32(files, shell);
 #endif
+    
     }
     
 void Clipboard::Call(const std::string& method,
@@ -71,21 +72,21 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Drag") {
 
 #ifdef OS_WIN
-	  // VK_MENU is actually the alt key
-	  if (!GetAsyncKeyState(VK_MENU)) {
-		  return;
-	  }
+      // VK_MENU is actually the alt key
+      if (!GetAsyncKeyState(VK_MENU)) {
+          return;
+      }
 #endif
 #ifdef OS_MACOSX
-	  unsigned short kVK_Option = 0x3A;
-	  if (!isPressed(kVK_Option))  {
-		  return;
-	  }
+      unsigned short kVK_Option = 0x3A;
+      if (!isPressed(kVK_Option))  {
+          return;
+      }
 #endif
 
       content::Shell* shell_ =
-            content::Shell::FromRenderViewHost(
-                dispatcher_host()->render_view_host());
+        content::Shell::FromRenderViewHost(
+            dispatcher_host()->render_view_host());
      
       const base::ListValue* fileList = NULL;
       arguments.GetList(0, &fileList);
@@ -94,13 +95,20 @@ void Clipboard::Call(const std::string& method,
       
       for (size_t i = 0; i < fileList->GetSize(); i++) {
           std::string file;
-		  fileList->GetString(i, &file);
+          fileList->GetString(i, &file);
           files.push_back(file);
       }
       
       content::BrowserThread::PostTask(
             content::BrowserThread::UI, FROM_HERE,
-            base::Bind(&DoDragAndDrop, files, shell_));
+                base::Bind(&DoDragAndDrop, files, shell_));
+      
+  } else if (method == "PrepareDrag") {
+      std::string message;
+      arguments.GetString(0, &message);
+      
+      content::BrowserThread::PostTask(content::BrowserThread::UI, FROM_HERE,
+                                       base::Bind(&createNotificationWindow, message));
   } else {
     NOTREACHED() << "Invalid call to Clipboard method:" << method
                  << " arguments:" << arguments;
