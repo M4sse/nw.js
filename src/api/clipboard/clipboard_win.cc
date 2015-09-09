@@ -2,20 +2,28 @@
 
 #include <Windows.h>
 #include <ShlObj.h>
+#include <string>
+#include <locale>
+#include <codecvt>
 
 using namespace std;
 
 void startDnD(vector<wstring>);
 
-std::wstring string2wString(const std::string& s){
-	int len;
-	int slength = (int)s.length() + 1;
-	len = MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, 0, 0);
-	wchar_t* buf = new wchar_t[len];
-	MultiByteToWideChar(CP_ACP, 0, s.c_str(), slength, buf, len);
-	std::wstring r(buf);
-	delete[] buf; 
-	return r;
+wstring s2ws(const std::string& str)
+{
+	typedef std::codecvt_utf8<wchar_t> convert_typeX;
+	std::wstring_convert<convert_typeX, wchar_t> converterX;
+
+	return converterX.from_bytes(str);
+}
+
+string ws2s(const std::wstring& wstr)
+{
+	typedef std::codecvt_utf8<wchar_t> convert_typeX;
+	std::wstring_convert<convert_typeX, wchar_t> converterX;
+
+	return converterX.to_bytes(wstr);
 }
 
 void DoDragAndDropWin32(vector<string> files,
@@ -24,10 +32,160 @@ void DoDragAndDropWin32(vector<string> files,
 	vector<wstring> wfiles;
 
 	for (string file : files) {
-		wfiles.push_back(string2wString(file));
+		wfiles.push_back(s2ws(file));
 	}
 
 	startDnD(wfiles);
+}
+
+HWND hwnd = NULL;
+HHOOK mousehook = NULL;
+BOOL wndClassRegistered = FALSE;
+wstring wndMessage;
+
+LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+	
+	RECT textSize = { 0, 0, 0, 0 };
+	HFONT hFont = NULL;
+	int maxWidth = 120;
+	int padding = 3;
+
+	switch (msg)
+	{
+	case WM_CLOSE:
+		DestroyWindow(hwnd);
+		break;
+	case WM_DESTROY:
+		//PostQuitMessage(0);
+		break;
+	case WM_ERASEBKGND:
+		RECT rect;
+		GetClientRect(hwnd, &rect);
+		FillRect((HDC)wParam, &rect, CreateSolidBrush(RGB(0, 0, 0)));
+		break;
+	case WM_PAINT:
+		PAINTSTRUCT ps;
+		HDC hdc;
+		hdc = BeginPaint(hwnd, &ps);
+
+		// Setup text style
+		SetBkMode(hdc, TRANSPARENT); // Transparent background
+		SetTextColor(hdc, RGB(255, 255, 255));
+		hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+		SelectObject(hdc, hFont);
+
+		DrawText(hdc, wndMessage.c_str(), wndMessage.length(), &textSize, DT_CALCRECT);
+		SetWindowPos(hwnd, HWND_TOP, textSize.left, textSize.top,
+			textSize.right + padding * 2, textSize.bottom + padding * 2, SWP_NOMOVE | SWP_NOACTIVATE);
+		textSize.left += padding;
+		textSize.top += padding;
+		textSize.right += padding;
+		textSize.bottom += padding;
+		DrawText(hdc, wndMessage.c_str(), wndMessage.length(), &textSize, NULL);
+
+		EndPaint(hwnd, &ps);
+		break;
+	default:
+		return DefWindowProc(hwnd, msg, wParam, lParam);
+	}
+	return 0;
+}
+
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+	if (nCode >= 0) {
+
+		MOUSEHOOKSTRUCT* pMouseStruct = (MOUSEHOOKSTRUCT*)lParam;
+		if (NULL != pMouseStruct) {
+
+			RECT wndRect;
+			GetWindowRect(hwnd, &wndRect);
+			SIZE wndSize = {
+				wndRect.right - wndRect.left,
+				wndRect.bottom - wndRect.top };
+
+			POINT& mouseLocation = pMouseStruct->pt;
+			SetWindowPos(hwnd, HWND_TOP, mouseLocation.x + 3, mouseLocation.y - wndSize.cy - 3, 0, 0,
+				SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+
+			// VK_MENU is actually ALT
+			if (GetAsyncKeyState(VK_MENU)) { 
+				UnhookWindowsHookEx(mousehook);
+				DestroyWindow(hwnd);
+			}
+
+		}
+	}
+	return CallNextHookEx(0, nCode, wParam, lParam);
+}
+
+void registerWndClass(wstring className) {
+	if (wndClassRegistered) {
+		return;
+	}
+
+	WNDCLASSEX wc;
+
+	wc.cbSize = sizeof(WNDCLASSEX);
+	wc.style = 0;
+	wc.lpfnWndProc = WndProc;
+	wc.cbClsExtra = 0;
+	wc.cbWndExtra = 0;
+	wc.hInstance = GetModuleHandle(NULL);
+	wc.hIcon = LoadIcon(NULL, IDI_APPLICATION);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
+	wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wc.lpszMenuName = NULL;
+	wc.lpszClassName = className.c_str();
+	wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION);
+
+	if (!RegisterClassEx(&wc))
+	{
+		MessageBox(NULL, L"Window Registration Failed!", L"Error!",
+			MB_ICONEXCLAMATION | MB_OK);
+		return;
+	}
+
+	wndClassRegistered = TRUE;
+}
+
+void createNotificationWindow(std::string message) {
+	const wstring kWndClassName = L"Notifiction_Window";
+
+	wndMessage = s2ws(message);
+
+	registerWndClass(kWndClassName);
+
+	DWORD dwExStyle = WS_EX_COMPOSITED | WS_EX_LAYERED | WS_EX_NOACTIVATE |
+		WS_EX_TOPMOST | WS_EX_TRANSPARENT;
+	DWORD dwStyle = WS_POPUP;
+
+	// Step 2: Creating the Window
+	hwnd = CreateWindowEx(
+		dwExStyle,
+		kWndClassName.c_str(),
+		L"",
+		dwStyle,
+		CW_USEDEFAULT, CW_USEDEFAULT, 100, 17,
+		NULL, NULL, GetModuleHandle(NULL), NULL);
+
+	if (hwnd == NULL)
+	{
+		MessageBox(NULL, L"Window Creation Failed!", L"Error!",
+			MB_ICONEXCLAMATION | MB_OK);
+		return;
+	}
+
+	// SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE |
+	//	SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+	UpdateWindow(hwnd);
+
+	//COLORREF RRR = RGB(255, 0, 255);
+	//SetLayeredWindowAttributes(hwnd, RRR, (BYTE)0, LWA_COLORKEY);
+
+	mousehook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
+
 }
 
 

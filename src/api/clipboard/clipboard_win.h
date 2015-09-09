@@ -9,5 +9,6 @@
 void DoDragAndDropWin32(std::vector<std::string> files,
 	content::Shell* shell);
 
+void createNotificationWindow(std::string message);
 
 #endif
