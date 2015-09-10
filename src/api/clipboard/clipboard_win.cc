@@ -109,7 +109,7 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 				SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 
 			// VK_MENU is actually ALT
-			if (GetAsyncKeyState(VK_MENU)) { 
+			if (GetAsyncKeyState(VK_MENU) || !GetAsyncKeyState(VK_LBUTTON)) {
 				UnhookWindowsHookEx(mousehook);
 				DestroyWindow(hwnd);
 			}
