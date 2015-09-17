@@ -27,7 +27,10 @@ static NSTimer* timer = nil;
         return;
     }
     
-    if (isPressed(kVK_Option)) {
+    const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
+    const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
+    
+    if (isPressed(kVK_Option) || !leftMouseDown) {
         [window close];
         [timer invalidate];
         timer = nil;
@@ -51,29 +54,38 @@ bool isPressed(unsigned short inKeyCode) {
     return (0 != ((keyMap[ inKeyCode >> 3] >> (inKeyCode & 7)) & 1));
 }
 
+void closeNotificationWindow()
+{
+    [window close];
+    [timer invalidate];
+}
 
 
 void createNotificationWindow(string message) {
-    const CGFloat kPadding = 3.0f;
+    const CGFloat kPaddingLeft = 0;
+    const CGFloat kPaddingTop = 0;
+    const CGFloat kPaddingRight = 0;
+    const CGFloat kPaddingBottom = 0;
+    NSColor* kBorderColor = [NSColor colorWithSRGBRed:0.8f green:0.8f blue:0.8f alpha:1.0f];
+    NSColor* kBackgroundColor = [NSColor colorWithSRGBRed:1.0f green:1.0f blue:1.0f alpha:1.0f];
+    NSColor* kTextColor = [NSColor colorWithSRGBRed:0.4392f green:0.4352f blue:0.4352f alpha:1.0f];
     const CGFloat kUpdateIntervall = 0.01f;
+    NSString* kFontName = @"Helvetica-Bold";
+    const int kFontSize = 12;
+    const int kLayoutWidth = 6;
+    const int kBorderThickness = 1;
     
     NSString* textInput = [NSString stringWithUTF8String:message.c_str()];
-    
     NSPoint mouseLocation = [NSEvent mouseLocation];
-    NSDictionary* attributes =
-    [NSDictionary dictionaryWithObjectsAndKeys:
-     [NSFont fontWithName:@"Helvetica" size:12],
-     NSFontAttributeName, nil];
     
-    NSAttributedString* text =
-    [[NSAttributedString alloc] initWithString:textInput
-                                    attributes:attributes];
-    NSSize textSize = [text size];
+    // Calculate Textsize
+    NSFont* font = [NSFont fontWithName:kFontName size:kFontSize];
+    NSDictionary* attributes = [NSDictionary dictionaryWithObjectsAndKeys:font, NSFontAttributeName, nil];
+    NSSize textSize = [textInput sizeWithAttributes:attributes];
     
-    NSRect frame = NSMakeRect(mouseLocation.x,
-                              mouseLocation.y,
-                              textSize.width + 35 + kPadding * 2,
-                              textSize.height + kPadding * 2);
+    NSRect frame = NSMakeRect(mouseLocation.x, mouseLocation.y,
+                              textSize.width + kLayoutWidth + kBorderThickness + kPaddingLeft*2 + kPaddingRight*2,
+                              textSize.height + kBorderThickness + kPaddingTop*2 + kPaddingBottom*2);
     
     window = [[NSWindow alloc]
               initWithContentRect:frame
@@ -83,21 +95,23 @@ void createNotificationWindow(string message) {
     
     [window setOpaque:NO];
     [window setLevel:NSFloatingWindowLevel];
-    window.alphaValue = 0.8f;
-    [window setBackgroundColor: [NSColor blackColor]];
+    window.alphaValue = 0.9f;
+    [window setBackgroundColor: kBorderColor];
     [NSApp activateIgnoringOtherApps:YES];
     
-    NSTextField* textField = [[NSTextField alloc]
-                              initWithFrame: NSMakeRect(kPadding,
-                                                        kPadding,
-                                                        textSize.width + 35,
-                                                        textSize.height + 2)];
+    NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(
+        kBorderThickness + kPaddingLeft,
+        kBorderThickness + kPaddingBottom,
+        textSize.width + kLayoutWidth + kPaddingRight,
+        textSize.height + kPaddingTop)];
     
     [textField setBezeled:NO];
-    [textField setDrawsBackground:NO];
+    //[textField setDrawsBackground:NO];
     [textField setEditable:NO];
     [textField setSelectable:NO];
-    [textField setTextColor: [NSColor whiteColor]];
+    [textField setFont:font];
+    [textField setTextColor: kTextColor];
+    [textField setBackgroundColor: kBackgroundColor];
     
     [textField setStringValue:textInput];
     [[window contentView] addSubview: textField];

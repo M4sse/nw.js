@@ -103,12 +103,15 @@ void Clipboard::Call(const std::string& method,
             content::BrowserThread::UI, FROM_HERE,
                 base::Bind(&DoDragAndDrop, files, shell_));
       
-  } else if (method == "PrepareDrag") {
+  } else if (method == "ShowNotification") {
       std::string message;
       arguments.GetString(0, &message);
       
       content::BrowserThread::PostTask(content::BrowserThread::UI, FROM_HERE,
                                        base::Bind(&createNotificationWindow, message));
+  } else if (method == "CloseNotification") {
+      content::BrowserThread::PostTask(content::BrowserThread::UI, FROM_HERE,
+                                       base::Bind(&closeNotificationWindow));
   } else {
     NOTREACHED() << "Invalid call to Clipboard method:" << method
                  << " arguments:" << arguments;

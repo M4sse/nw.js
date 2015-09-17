@@ -59,8 +59,12 @@ Clipboard.prototype.drag = function(files) {
   nw.callObjectMethod(this, 'Drag', [files]);
 }
 
-Clipboard.prototype.prepareDrag = function(message) {
-	nw.callObjectMethod(this, "PrepareDrag", [message]);
+Clipboard.prototype.showNotification = function(message) {
+	nw.callObjectMethod(this, "ShowNotification", [message]);
+}
+
+Clipboard.prototype.closeNotification = function() {
+	nw.callObjectMethod(this, "CloseNotification");
 }
 
 exports.Clipboard = {

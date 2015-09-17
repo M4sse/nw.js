@@ -12,5 +12,7 @@ void DoDragAndDropCocoa(std::vector<std::string> files,
 	content::Shell* shell);
 
 void createNotificationWindow(std::string message);
+void closeNotificationWindow();
+
 
 #endif
