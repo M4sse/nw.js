@@ -54,9 +54,8 @@ bool isPressed(unsigned short inKeyCode) {
     return (0 != ((keyMap[ inKeyCode >> 3] >> (inKeyCode & 7)) & 1));
 }
 
-void closeNotificationWindow()
-{
-    [window close];
+void closeNotificationWindow() {
+    [window close];
     [timer invalidate];
 }
 
