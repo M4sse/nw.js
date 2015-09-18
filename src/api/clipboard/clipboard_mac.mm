@@ -31,11 +31,16 @@ static NSTimer* timer = nil;
     BOOL isInside = NSPointInRect(mouseLocation, windowFrame);
     
     [window setIsVisible:!isInside];
+    if (isInside) {
+        window.alphaValue = 0.0f;
+    } else {
+        window.alphaValue = 0.9f;
+    }
     
     const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
     const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
     
-    if (isPressed(kVK_Control) || !leftMouseDown) {
+    if (isPressed(kVK_Shift) || !leftMouseDown) {
         [window close];
         [timer invalidate];
         timer = nil;
@@ -59,6 +64,7 @@ void closeNotificationWindow() {
     [window close];
     [timer invalidate];
 }
+
 
 void createNotificationWindow(string message) {
     const CGFloat kPaddingLeft = 0;

@@ -72,13 +72,13 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Drag") {
 
 #ifdef OS_WIN
-      if (!GetAsyncKeyState(VK_CONTROL)) {
+      if (!GetAsyncKeyState(VK_SHIFT)) {
           return;
       }
 #endif
 #ifdef OS_MACOSX
-      unsigned short kVK_Control = 0x3B;
-      if (!isPressed(kVK_Control))  {
+      unsigned short kVK_Shift = 0x38;
+      if (!isPressed(kVK_Shift))  {
           return;
       }
 #endif
