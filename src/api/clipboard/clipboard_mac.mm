@@ -20,7 +20,6 @@ static NSTimer* timer = nil;
 @implementation TimerFunction
 
 - (void)updatePosition {
-    const unsigned short kVK_Option = 0x3A;
     const CGFloat kDistance = 3.0f;
     
     if (window == nil) {
@@ -36,7 +35,7 @@ static NSTimer* timer = nil;
     const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
     const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
     
-    if (isPressed(kVK_Option) || !leftMouseDown) {
+    if (isPressed(kVK_Control) || !leftMouseDown) {
         [window close];
         [timer invalidate];
         timer = nil;
@@ -60,7 +59,6 @@ void closeNotificationWindow() {
     [window close];
     [timer invalidate];
 }
-
 
 void createNotificationWindow(string message) {
     const CGFloat kPaddingLeft = 0;

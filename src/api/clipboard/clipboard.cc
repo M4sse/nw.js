@@ -72,14 +72,13 @@ void Clipboard::Call(const std::string& method,
   } else if (method == "Drag") {
 
 #ifdef OS_WIN
-      // VK_MENU is actually the alt key
-      if (!GetAsyncKeyState(VK_MENU)) {
+      if (!GetAsyncKeyState(VK_CONTROL)) {
           return;
       }
 #endif
 #ifdef OS_MACOSX
-      unsigned short kVK_Option = 0x3A;
-      if (!isPressed(kVK_Option))  {
+      unsigned short kVK_Control = 0x3B;
+      if (!isPressed(kVK_Control))  {
           return;
       }
 #endif
