@@ -27,6 +27,12 @@ static NSTimer* timer = nil;
         return;
     }
     
+    NSRect windowFrame = [window frame];
+    NSPoint mouseLocation = [NSEvent mouseLocation];
+    BOOL isInside = NSPointInRect(mouseLocation, windowFrame);
+    
+    [window setIsVisible:!isInside];
+    
     const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
     const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
     
@@ -36,7 +42,6 @@ static NSTimer* timer = nil;
         timer = nil;
         //window = nil;
     } else {
-        NSPoint mouseLocation = [NSEvent mouseLocation];
         mouseLocation.x = mouseLocation.x + kDistance;
         mouseLocation.y = mouseLocation.y + kDistance;
         [window setFrameOrigin:mouseLocation];
@@ -44,9 +49,6 @@ static NSTimer* timer = nil;
 }
 
 @end
-
-
-
 
 bool isPressed(unsigned short inKeyCode) {
 	unsigned char keyMap[16];
