@@ -106,8 +106,11 @@ void Clipboard::Call(const std::string& method,
       std::string message;
       arguments.GetString(0, &message);
       
+      content::Shell* shell_ = content::Shell::FromRenderViewHost(
+                                    dispatcher_host()->render_view_host());
+      
       content::BrowserThread::PostTask(content::BrowserThread::UI, FROM_HERE,
-                                       base::Bind(&createNotificationWindow, message));
+                                       base::Bind(&registerNotificationWindow, message, shell_));
   } else if (method == "CloseNotification") {
       content::BrowserThread::PostTask(content::BrowserThread::UI, FROM_HERE,
                                        base::Bind(&closeNotificationWindow));

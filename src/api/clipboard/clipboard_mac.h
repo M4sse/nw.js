@@ -11,7 +11,9 @@ bool isPressed(unsigned short inKeyCode);
 void DoDragAndDropCocoa(std::vector<std::string> files,
 	content::Shell* shell);
 
-void createNotificationWindow(std::string message);
+void registerNotificationWindow(std::string message_,
+                                content::Shell* shell);
+void createNotificationWindow();
 void closeNotificationWindow();
 
 
