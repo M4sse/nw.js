@@ -33,22 +33,27 @@ static BOOL wndIsOpen = false;
     NSPoint mouseLocation = [NSEvent mouseLocation];
     BOOL isInside = NSPointInRect(mouseLocation, windowFrame);
     
+    const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
+    const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
+    
     if (isInside) {
+        if (isPressed(kVK_Shift || !leftMouseDown)) {
+            if (timer != nil) {
+                [timer invalidate];
+                timer = nil;
+            }
+        }
         closeNotificationWindow();
     } else {
         createNotificationWindow();
-        
-        if (notificationWindow == nil) {
-            return;
-        }
-        
-        const NSUInteger pressedButtonMask = [NSEvent pressedMouseButtons];
-        const BOOL leftMouseDown = (pressedButtonMask & (1 << 0)) != 0;
-        
+       
         if (isPressed(kVK_Shift) || !leftMouseDown) {
             closeNotificationWindow();
-            [timer invalidate];
-
+            
+            if (timer != nil) {
+                [timer invalidate];
+                timer = nil;
+            }
         } else {
             NSPoint mouseLocation = [NSEvent mouseLocation];
             mouseLocation.x = mouseLocation.x + kDistance;
@@ -57,8 +62,9 @@ static BOOL wndIsOpen = false;
         }
     }
 }
-
 @end
+
+static TimerFunction* timerFunction = nil;
 
 bool isPressed(unsigned short inKeyCode) {
 	unsigned char keyMap[16];
@@ -73,18 +79,24 @@ void registerNotificationWindow(string message_, content::Shell* shell) {
     mainWindow =
         static_cast<nw::NativeWindowCocoa*>(shell->window())->window();
     
-    TimerFunction* timerFunction = [TimerFunction alloc];
-    
-    timer = [NSTimer scheduledTimerWithTimeInterval:kUpdateIntervall
+    if (timer == nil) {
+        
+        if (timerFunction == nil) {
+            timerFunction = [TimerFunction alloc];
+        }
+            
+        timer = [NSTimer scheduledTimerWithTimeInterval:kUpdateIntervall
                                              target:timerFunction
                                            selector:@selector(checkMousePosition)
                                            userInfo:nil
                                             repeats:YES];
+    }
 }
 
 void closeNotificationWindow() {
     if (wndIsOpen) {
         [notificationWindow close];
+        notificationWindow = nil;
         wndIsOpen = false;
     }
 }
@@ -93,6 +105,7 @@ void createNotificationWindow() {
     if (wndIsOpen) {
         return;
     }
+    wndIsOpen = true;
     
     const CGFloat kPaddingLeft = 0;
     const CGFloat kPaddingTop = 0;
@@ -123,12 +136,13 @@ void createNotificationWindow() {
               styleMask:NSBorderlessWindowMask
               backing:NSBackingStoreBuffered
               defer:NO];
-    
+
     [notificationWindow setOpaque:NO];
     [notificationWindow setLevel:NSFloatingWindowLevel];
     notificationWindow.alphaValue = 0.9f;
     [notificationWindow setBackgroundColor: kBorderColor];
     [NSApp activateIgnoringOtherApps:YES];
+    [notificationWindow setReleasedWhenClosed:YES];
     
     NSTextField* textField = [[NSTextField alloc] initWithFrame:NSMakeRect(
         kBorderThickness + kPaddingLeft,
@@ -149,7 +163,6 @@ void createNotificationWindow() {
     
     [notificationWindow makeKeyAndOrderFront: notificationWindow];
     
-    wndIsOpen = true;
 }
 
 void DoDragAndDropCocoa(vector<string> files, content::Shell* shell) {
@@ -195,4 +208,14 @@ void DoDragAndDropCocoa(vector<string> files, content::Shell* shell) {
            pasteboard:pboard
                source:mainWindow
             slideBack:YES];
+    
+    // Send global shift press to fix the bug, where you have to hit shift twice
+    CGEventRef keyDown = CGEventCreateKeyboardEvent(NULL, kVK_Shift, YES);
+    CGEventRef keyUp   = CGEventCreateKeyboardEvent(NULL, kVK_Shift, NO);
+    
+    CGEventPost(kCGSessionEventTap, keyDown);
+    CGEventPost(kCGSessionEventTap, keyUp);
+    
+    CFRelease(keyDown);
+    CFRelease(keyUp);
 }
