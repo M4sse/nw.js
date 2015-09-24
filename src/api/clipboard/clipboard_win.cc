@@ -1,5 +1,8 @@
 #include "clipboard_win.h"
 
+#include "ui/views/win/hwnd_util.h"
+#include "content/nw/src/browser/native_window_aura.h"
+
 #include <Windows.h>
 #include <ShlObj.h>
 #include <string>
@@ -39,9 +42,31 @@ void DoDragAndDropWin32(vector<string> files,
 }
 
 HWND hwnd = NULL;
+HWND mainWindow = NULL;
 HHOOK mousehook = NULL;
 BOOL wndClassRegistered = FALSE;
+BOOL wndIsOpen = FALSE;
 wstring wndMessage;
+
+void drawBorder(HDC hdc, RECT textSize, int padding) {
+	HPEN hOldPen;
+	COLORREF qLineColor = RGB(0xCC, 0xCC, 0xCC);
+	HPEN hLinePen = CreatePen(PS_SOLID, 1, qLineColor);
+
+	int right = textSize.right - 6 + padding * 2;
+	int bottom = textSize.bottom - 4 + padding * 2 - 2;
+
+	hOldPen = (HPEN)SelectObject(hdc, hLinePen);
+
+	MoveToEx(hdc, 0, 0, NULL);
+	LineTo(hdc, right, 0);
+	LineTo(hdc, right, bottom);
+	LineTo(hdc, 0, bottom);
+	LineTo(hdc, 0, 0);
+
+	SelectObject(hdc, hOldPen);
+	DeleteObject(hLinePen);
+}
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -49,7 +74,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	RECT textSize = { 0, 0, 0, 0 };
 	HFONT hFont = NULL;
 	int maxWidth = 120;
-	int padding = 3;
+	int padding = 5;
 
 	switch (msg)
 	{
@@ -62,7 +87,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	case WM_ERASEBKGND:
 		RECT rect;
 		GetClientRect(hwnd, &rect);
-		FillRect((HDC)wParam, &rect, CreateSolidBrush(RGB(0, 0, 0)));
+		FillRect((HDC)wParam, &rect, CreateSolidBrush(RGB(255, 255, 255)));
 		break;
 	case WM_PAINT:
 		PAINTSTRUCT ps;
@@ -71,18 +96,23 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		// Setup text style
 		SetBkMode(hdc, TRANSPARENT); // Transparent background
-		SetTextColor(hdc, RGB(255, 255, 255));
-		hFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
+		SetTextColor(hdc, RGB(0x70, 0x6f, 0x6f));
+		hFont = CreateFont(-MulDiv(10, GetDeviceCaps(hdc, LOGPIXELSY), 72), 0,
+			0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 0, 0, L"Segoe UI");
 		SelectObject(hdc, hFont);
 
-		DrawText(hdc, wndMessage.c_str(), wndMessage.length(), &textSize, DT_CALCRECT);
+		DrawText(hdc, wndMessage.c_str(), wndMessage.length(), &textSize,
+			DT_CALCRECT);
 		SetWindowPos(hwnd, HWND_TOP, textSize.left, textSize.top,
-			textSize.right + padding * 2, textSize.bottom + padding * 2, SWP_NOMOVE | SWP_NOACTIVATE);
+			textSize.right + padding * 2, textSize.bottom + padding * 2,
+			SWP_NOMOVE | SWP_NOACTIVATE);
 		textSize.left += padding;
 		textSize.top += padding;
 		textSize.right += padding;
 		textSize.bottom += padding;
 		DrawText(hdc, wndMessage.c_str(), wndMessage.length(), &textSize, NULL);
+
+		drawBorder(hdc, textSize, padding);
 
 		EndPaint(hwnd, &ps);
 		break;
@@ -92,6 +122,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+void closeNotificationWindow() {
+	UnhookWindowsHookEx(mousehook);
+	DestroyWindow(hwnd);
+}
+
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 	if (nCode >= 0) {
 
@@ -99,21 +134,36 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 		if (NULL != pMouseStruct) {
 
 			RECT wndRect;
-			GetWindowRect(hwnd, &wndRect);
-			SIZE wndSize = {
-				wndRect.right - wndRect.left,
-				wndRect.bottom - wndRect.top };
+			GetWindowRect(mainWindow, &wndRect);
 
 			POINT& mouseLocation = pMouseStruct->pt;
-			SetWindowPos(hwnd, HWND_TOP, mouseLocation.x + 3, mouseLocation.y - wndSize.cy - 3, 0, 0,
-				SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+			BOOL isInside = PtInRect(&wndRect, mouseLocation);
+			if (isInside) {
+				if (wndIsOpen) {
+					ShowWindow(hwnd, SW_HIDE);
+					wndIsOpen = FALSE;
+				}
+			} else {
+				if (!wndIsOpen) {
+					ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+					wndIsOpen = TRUE;
+				}
 
-			// VK_MENU is actually ALT
-			if (GetAsyncKeyState(VK_MENU) || !GetAsyncKeyState(VK_LBUTTON)) {
+				RECT notiWndRect;
+				GetWindowRect(hwnd, &notiWndRect);
+				SIZE notiwndSize = {
+					notiWndRect.right - notiWndRect.left,
+					notiWndRect.bottom - notiWndRect.top };
+
+				SetWindowPos(hwnd, HWND_TOP, mouseLocation.x + 3,
+					mouseLocation.y - notiwndSize.cy - 3, 0, 0,
+					SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+			}
+
+			if (GetAsyncKeyState(VK_SHIFT) || !GetAsyncKeyState(VK_LBUTTON)) {
 				UnhookWindowsHookEx(mousehook);
 				DestroyWindow(hwnd);
 			}
-
 		}
 	}
 	return CallNextHookEx(0, nCode, wParam, lParam);
@@ -149,10 +199,21 @@ void registerWndClass(wstring className) {
 	wndClassRegistered = TRUE;
 }
 
-void createNotificationWindow(std::string message) {
-	const wstring kWndClassName = L"Notifiction_Window";
+void registerNotificationWindow(std::string message_,
+	content::Shell* shell) {
 
-	wndMessage = s2ws(message);
+	//mainWindow = views::HWNDForNativeWindow(shell->GetNativeWIndow);
+	gfx::NativeView nativeView = static_cast<nw::NativeWindowAura*>(
+		shell->window())->GetHostView();
+
+	mainWindow = views::HWNDForNativeView(nativeView);
+
+	wndMessage = s2ws(message_);
+	createNotificationWindow();
+}
+
+void createNotificationWindow() {
+	const wstring kWndClassName = L"Notifiction_Window";
 
 	registerWndClass(kWndClassName);
 
@@ -178,11 +239,11 @@ void createNotificationWindow(std::string message) {
 
 	// SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE |
 	//	SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-	ShowWindow(hwnd, SW_SHOWNOACTIVATE);
+	ShowWindow(hwnd, SW_HIDE);
 	UpdateWindow(hwnd);
 
-	//COLORREF RRR = RGB(255, 0, 255);
-	//SetLayeredWindowAttributes(hwnd, RRR, (BYTE)0, LWA_COLORKEY);
+	COLORREF RRR = RGB(0, 0, 0);
+	SetLayeredWindowAttributes(hwnd, RRR, (BYTE)229, LWA_ALPHA);
 
 	mousehook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, NULL, 0);
 
@@ -263,6 +324,10 @@ DWORD WINAPI handle_dnd(HGLOBAL drop_files)
 
 void startDnD(vector<wstring> files) {
 	HGLOBAL dndFiles = create_drop_files(files);
+
+	const HCURSOR cursorNo = LoadCursor(GetModuleHandle(NULL), IDC_CROSS);
+	SetCursor(cursorNo);
+
 	handle_dnd(dndFiles);
 	free_drop_files(dndFiles);
 }
