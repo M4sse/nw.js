@@ -47,6 +47,7 @@ HHOOK mousehook = NULL;
 BOOL wndClassRegistered = FALSE;
 BOOL wndIsOpen = FALSE;
 wstring wndMessage;
+BOOL isDragging = FALSE;
 
 void drawBorder(HDC hdc, RECT textSize, int padding) {
 	HPEN hOldPen;
@@ -70,7 +71,7 @@ void drawBorder(HDC hdc, RECT textSize, int padding) {
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	
+
 	RECT textSize = { 0, 0, 0, 0 };
 	HFONT hFont = NULL;
 	int maxWidth = 120;
@@ -123,8 +124,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 }
 
 void closeNotificationWindow() {
-	UnhookWindowsHookEx(mousehook);
-	DestroyWindow(hwnd);
+	if (mousehook != NULL && hwnd != NULL) {
+		UnhookWindowsHookEx(mousehook);
+		DestroyWindow(hwnd);
+	}
 }
 
 LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
@@ -160,9 +163,11 @@ LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
 					SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
 			}
 
-			if (GetAsyncKeyState(VK_SHIFT) || !GetAsyncKeyState(VK_LBUTTON)) {
-				UnhookWindowsHookEx(mousehook);
-				DestroyWindow(hwnd);
+			//bool isShiftDown = GetAsyncKeyState(VK_SHIFT);
+			bool isLButtonDown = GetAsyncKeyState(VK_LBUTTON);
+
+			if (!isLButtonDown || isDragging) {
+				closeNotificationWindow();
 			}
 		}
 	}
@@ -314,7 +319,9 @@ DWORD WINAPI handle_dnd(HGLOBAL drop_files)
 	CreateDropSource(&pDropSource);
 	CreateDataObject(&fmtetc, &stgmed, 1, &pDataObject);
 
+	isDragging = TRUE;
 	dwResult = DoDragDrop(pDataObject, pDropSource, DROPEFFECT_COPY, &dwEffect);
+	isDragging = FALSE;
 
 	pDataObject->Release();
 	pDropSource->Release();
@@ -328,6 +335,7 @@ void startDnD(vector<wstring> files) {
 	const HCURSOR cursorNo = LoadCursor(GetModuleHandle(NULL), IDC_CROSS);
 	SetCursor(cursorNo);
 
+	closeNotificationWindow();
 	handle_dnd(dndFiles);
 	free_drop_files(dndFiles);
 }
